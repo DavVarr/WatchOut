@@ -32,7 +32,7 @@ public class ServerService {
         return Response.ok(Server.getInstance().getPlayers()).build();
     }
 
-    @Path("hearth-rate")
+    @Path("heart-rate")
     @POST
     @Consumes({"application/json", "application/xml"})
     public Response addHRMeasurements(HeartRateMeasurements hr){

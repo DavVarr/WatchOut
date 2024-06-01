@@ -132,7 +132,7 @@ class Server {
     }
 
     /*
-     * Computes the average of the last n hearth rate measurements.
+     * Computes the average of the last n heart rate measurements.
      * if n > # measurements || n < 0  throws IllegalArgumentException
      * if the player does not have measurements throws NoSuchElementException
      */
