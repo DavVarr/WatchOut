@@ -44,8 +44,7 @@ class Server {
     }
 
     public void shutdown() {
-        System.out.println("Shutdown server");
-        stopRest();
+        httpServer.stop(0);
     }
     /*
      * Adds a player to the players data structure, if it has a unique id.
@@ -105,11 +104,6 @@ class Server {
         }
     }
 
-    private void stopRest() {
-        System.out.println("Stopping Rest server");
-        httpServer.stop(0);
-        System.out.println("Rest server stopped");
-    }
 
     public boolean existsPlayerHRMeasurements(int id){
         synchronized (measurementsMap) {
