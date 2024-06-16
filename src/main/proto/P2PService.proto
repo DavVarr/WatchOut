@@ -1,0 +1,39 @@
+syntax = "proto3";
+package p2p;
+import "google/protobuf/empty.proto";
+
+message GreetRequest {
+    int32 id = 1;
+    int32 listenPort = 2;
+    string playerAddress = 3;
+    int32 x = 4;
+    int32 y = 5;
+}
+
+enum Phase{
+    UNKNOWN = 0;
+    PREPARATION = 1;
+    ELECTION = 2;
+    GAME = 3;
+    END = 4;
+}
+
+message GreetResponse{
+    Phase phase = 1;
+}
+
+
+message CoordinatorId{
+    int32 id = 1;
+}
+message OkResponse {
+}
+
+
+
+service P2PService {
+    rpc presentSelf(GreetRequest) returns (GreetResponse);
+    rpc Election(google.protobuf.Empty) returns (OkResponse);
+    rpc Coordinator(CoordinatorId) returns (google.protobuf.Empty);
+
+}
