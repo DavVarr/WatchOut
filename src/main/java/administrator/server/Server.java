@@ -20,7 +20,9 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 
-
+/**
+ * A singleton class that represents the administration server, with its data structures and functionalities.
+ */
 class Server {
     private final String HOST = "localhost";
     private final int PORT = 1337;
@@ -29,13 +31,20 @@ class Server {
     private HttpServer httpServer;
     private static Server instance;
 
+    /**
+     * Constructs a server, initializing the datastructures to hold the players and the heart rate measurements,
+     * starting also the jersey rest server.
+     */
     private Server() {
         players = new HashMap<>();
         measurementsMap = new HashMap<>();
         startRest();
     }
 
-    //singleton
+    /**
+     * Gets the singleton instance of this class.
+     * @return The Server instance.
+     */
     public synchronized static Server getInstance() {
         if (instance == null) {
             instance = new Server();
@@ -43,12 +52,16 @@ class Server {
         return instance;
     }
 
+    /**
+     * Stops the server.
+     */
     public void shutdown() {
         httpServer.stop(0);
     }
-    /*
+    /**
      * Adds a player to the players data structure, if it has a unique id.
-     * Returns the generated coordinates for the player and the list of the other already connected players,
+     * @param player the player to be added.
+     * @return The generated coordinates for the player and the list of the other already connected players,
      * or null if the id is not unique.
      */
     public AddPlayerResponse addPlayer(Player player) {
@@ -76,13 +89,20 @@ class Server {
             }
         }
 
-
+    /**
+     * Gets the list of players.
+     * @return The list of players.
+     */
     public List<Player> getPlayers() {
         synchronized (players) {
             return new ArrayList<>(players.values());
         }
     }
 
+    /**
+     * Adds an HeartRateMeasurements object to the server data structure.
+     * @param measure The measurement to be added.
+     */
     public void addHRMeasurements(HeartRateMeasurements measure){
         synchronized (measurementsMap){
             List<HeartRateMeasurements> measurementsList = measurementsMap.get(measure.id);
@@ -94,6 +114,9 @@ class Server {
         }
     }
 
+    /**
+     * Starts the rest server.
+     */
     private void startRest() {
         try {
             httpServer = HttpServerFactory.create("http://" + HOST + ":" + PORT + "/");
@@ -104,31 +127,42 @@ class Server {
         }
     }
 
-
+    /**
+     * Checks if there is at least a heart rate measurement for a specific player.
+     * @param id The player ID
+     * @return True if there is at least one heart rate measurement for the specified player, false otherwise.
+     */
     public boolean existsPlayerHRMeasurements(int id){
         synchronized (measurementsMap) {
             return measurementsMap.containsKey(id) && !measurementsMap.get(id).isEmpty();
         }
     }
 
+    /**
+     * Computes the number of
+     * @param playerId
+     * @return
+     */
     public int measurementsCount(int playerId) {
         synchronized (measurementsMap) {
         return measurementsMap.get(playerId).stream().map(a -> a.averageHRList.size()).reduce((a, b) -> a+b).get();
         }
     }
 
+    /**
+     * Checks if there is any heart rate measurement in the server data structure.
+     * @return true if there is any measurement, false otherwise.
+     */
     public boolean anyMeasurement(){
         synchronized (measurementsMap) {
-            if (measurementsMap.values() == null || measurementsMap.values().isEmpty()) {
-                return false;
-            }else return true;
+            return !measurementsMap.values().isEmpty();
         }
     }
 
-    /*
+    /**
      * Computes the average of the last n heart rate measurements.
-     * if n > # measurements || n < 0  throws IllegalArgumentException
-     * if the player does not have measurements throws NoSuchElementException
+     * @throws IllegalArgumentException if n > # measurements || n < 0
+     * @throws NoSuchElementException if the player does not have measurements
      */
     public Double getAverageLastNHR(int n, int playerId) {
         synchronized (measurementsMap) {
@@ -152,11 +186,11 @@ class Server {
          
     }
 
-    /*
+    /**
      * Computes the average of all heart rate measurements between timestamp t1 and t2.
-     * throws IllegalArgumentException if t1 > t2.
-     * throws IllegalStateException if there are no measurements.
-     * returns the average or null if there are no measurements between timestamp t1 and t2.
+     * @throws IllegalArgumentException if t1 > t2.
+     * @throws IllegalStateException if there are no measurements.
+     * @return the average or null if there are no measurements between timestamp t1 and t2.
      */
     public Double getAverageRangeHR(long t1, long t2) {
         if (t1 > t2) throw new IllegalArgumentException("Invalid timestamps. The start timestamp must be less than or equal to the end timestamp.");
