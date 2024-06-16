@@ -9,17 +9,29 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
+/**
+ * This class represents player data that needs to be stored in various places (server, other players)
+ */
 public class Player extends AbstractPlayer{
 
     public Player(){
 
     }
+
+    /**
+     * Constructs a player from and AbstractPlayer
+     * @param player The AbstractPlayer
+     */
     public Player(player.AbstractPlayer player) {
         this.id = player.getId();
         this.listenPort = player.getListenPort();
         this.playerAddress = player.getPlayerAddress();
     }
 
+    /**
+     * Constructs a player from a GreetRequest
+     * @param player the GreetRequest
+     */
     public Player(GreetRequest player) {
         this.id = player.getId();
         this.listenPort = player.getListenPort();
