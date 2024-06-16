@@ -1,7 +1,6 @@
 package beans;
 
-
-
+import p2p.P2PServiceOuterClass.GreetRequest;
 import player.AbstractPlayer;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -21,13 +20,21 @@ public class Player extends AbstractPlayer{
         this.playerAddress = player.getPlayerAddress();
     }
 
-
+    public Player(GreetRequest player) {
+        this.id = player.getId();
+        this.listenPort = player.getListenPort();
+        this.playerAddress = player.getPlayerAddress();
+        this.x = player.getX();
+        this.y = player.getY();
+    }
 
     @Override
     public String toString() {
         return "Player{" +
                 "id=" + id +
                 ", address=" + playerAddress + ":"+ listenPort +
+                ", x=" + x +
+                ", y=" + y +
                 '}';
     }
 }
