@@ -6,12 +6,11 @@ import player.AbstractPlayer;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
-
-@XmlRootElement
-@XmlAccessorType(XmlAccessType.FIELD)
 /**
  * This class represents player data that needs to be stored in various places (server, other players)
  */
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class Player extends AbstractPlayer{
 
     public Player(){
