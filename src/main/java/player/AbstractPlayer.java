@@ -63,4 +63,17 @@ public abstract class AbstractPlayer {
         }
     }
 
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof AbstractPlayer)) return false;
+        AbstractPlayer other = (AbstractPlayer) obj;
+        return id == other.getId();
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.valueOf(id).hashCode();
+    }
+
 }
