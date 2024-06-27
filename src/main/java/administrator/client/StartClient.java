@@ -11,7 +11,8 @@ public class StartClient {
             System.out.println("1 - list of players registered");
             System.out.println("2 - average of the last n heart rate measurements sent to the server by a specific player");
             System.out.println("3 - average of the heart rate sent by all the players to the server and occurred from timestamps t1 and t2");
-
+            System.out.println("4 - announce the start of the game");
+            System.out.println("5 - broadcast a message to all players");
             Scanner scanner = new Scanner(System.in);
             String input = scanner.next();
             switch (input) {
@@ -35,6 +36,16 @@ public class StartClient {
                     System.out.print("Insert the timestamp t2 (long): ");
                     long t2 = Long.parseLong(scanner.next());
                     client.printAverageRangeHR(t1, t2);
+                    break;
+                case "4":
+                    client.broadcastMessage("start");
+                    System.out.println("message:'start' delivered");
+                    break;
+                case "5":
+                    System.out.print("Insert message");
+                    String m = scanner.next();
+                    client.broadcastMessage(m);
+                    System.out.println("message:'"+ m +"' delivered");
                     break;
                 default:
                     System.out.println("Operation not available.");
