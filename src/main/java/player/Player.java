@@ -18,6 +18,8 @@ import beans.AddPlayerResponse;
 import io.grpc.ServerBuilder;
 import org.eclipse.paho.client.mqttv3.*;
 import p2p.P2PServiceOuterClass;
+import player.simulator.HRSimulator;
+import player.simulator.SlidingWindowBuffer;
 
 /**
  * A player of the WatchOut game. A player is able to register to the administration server, to participate in
@@ -40,6 +42,13 @@ public class Player extends AbstractPlayer{
     private final Object taggedLock = new Object();
     private final List<P2PServiceOuterClass.PlayerOutcome> outcomes = new ArrayList<>();
     private BroadcastResponses<P2PServiceOuterClass.PlayerOutcome> syncOutcomes;
+
+    private SlidingWindowBuffer slidingWindowBuffer;
+    private SlidingWindowConsumer slidingWindowConsumer;
+    private List<Double> averageHRList;
+    private HRSimulator hrSimulator;
+    private MeasurementSender measurementSender;
+
     /**
      * Constructs a Player initializing the necessary fields
      * @param id The id of this player
@@ -80,8 +89,8 @@ public class Player extends AbstractPlayer{
             return;
         }
 
-        // TO:DO start heartbeat thread
-
+        // start sensor data related threads
+        startSimulator();
         // present to already registered players
         BroadcastResponses<P2PServiceOuterClass.GreetResponse> greetResponses;
         synchronized(peers){
@@ -115,6 +124,24 @@ public class Player extends AbstractPlayer{
             resetGameVariables();
 
         }
+    }
+
+    /**
+     * Starts heart rate sensor simulator. Every 10 seconds, the collected measurements are sent to the administration
+     * server.
+     */
+    private void startSimulator() {
+        slidingWindowBuffer = new SlidingWindowBuffer();
+        averageHRList = new ArrayList<>();
+
+        hrSimulator = new HRSimulator(slidingWindowBuffer);
+        slidingWindowConsumer = new SlidingWindowConsumer(slidingWindowBuffer, averageHRList);
+        measurementSender = new MeasurementSender(id, adminAddress, averageHRList);
+
+        hrSimulator.start();
+        slidingWindowConsumer.start();
+        measurementSender.start();
+        System.out.println("Simulator started!");
     }
 
     /**
