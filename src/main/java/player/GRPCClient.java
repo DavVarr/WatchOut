@@ -34,6 +34,7 @@ public class GRPCClient {
         P2PServiceGrpc.P2PServiceStub stub = P2PServiceGrpc.newStub(channel);
 
         P2PServiceOuterClass.Player greetRequest = P2PServiceOuterClass.Player.newBuilder().setId(client.getId())
+                .setPlayerAddress(client.getPlayerAddress())
                 .setListenPort(client.getListenPort())
                 .setX(client.getX())
                 .setY(client.getY())
@@ -180,7 +181,14 @@ public class GRPCClient {
         ManagedChannel channel = ManagedChannelBuilder.forTarget(p.playerAddress + ":" + p.listenPort).usePlaintext().build();
         P2PServiceGrpc.P2PServiceStub stub = P2PServiceGrpc.newStub(channel);
         long t = r.getAcquireTimestamp();
-        P2PServiceOuterClass.HomeBaseRequest request  = P2PServiceOuterClass.HomeBaseRequest.newBuilder().setTimestamp(t).build();
+        P2PServiceOuterClass.HomeBaseRequest.PlayerConnection connInfo = P2PServiceOuterClass.HomeBaseRequest.PlayerConnection.newBuilder()
+                .setPlayerAddress(client.getPlayerAddress())
+                .setListenPort(client.getListenPort())
+                .build();
+        P2PServiceOuterClass.HomeBaseRequest request  = P2PServiceOuterClass.HomeBaseRequest.newBuilder()
+                .setTimestamp(t)
+                .setPlayer(connInfo)
+                .build();
         stub.acquireHomeBase(request,new StreamObserver<P2PServiceOuterClass.OkResponse>() {
 
             @Override
