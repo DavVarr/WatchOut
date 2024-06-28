@@ -49,11 +49,13 @@ class MeasurementSender extends Thread {
 
                 HeartRateMeasurements hr;
                 synchronized (averageHRList) {
+                    if (averageHRList.isEmpty()) continue;
                     ArrayList<Double> measurements = new ArrayList<>(averageHRList);
                     hr = new HeartRateMeasurements(id, System.currentTimeMillis(),measurements);
-                    averageHRList.clear();
+                    int httpStatus = postRequest(adminAddress+"/players/heart-rate",hr).getStatus();
+                    if (httpStatus == 200) averageHRList.clear();
+
                 }
-                postRequest(adminAddress,hr);
             }
 
 
