@@ -272,7 +272,7 @@ public class GRPCClient {
     public void sendGoToPreparation(beans.Player p){
         ManagedChannel channel = ManagedChannelBuilder.forTarget(p.getPlayerAddress() + ":" + p.getListenPort()).usePlaintext().build();
         P2PServiceGrpc.P2PServiceStub stub = P2PServiceGrpc.newStub(channel);
-        stub.endGame(Empty.newBuilder().build(), new StreamObserver<Empty>() {
+        stub.goToPreparation(Empty.newBuilder().build(), new StreamObserver<Empty>() {
             @Override
             public void onNext(Empty value) {
             }
