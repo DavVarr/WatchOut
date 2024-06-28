@@ -47,6 +47,7 @@ message HomeBaseRequest{
 
 message PlayerOutcome{
     bool safe = 1;
+    Player player = 2;
 }
 
 service P2PService {

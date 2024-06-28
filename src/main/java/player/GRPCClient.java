@@ -153,7 +153,17 @@ public class GRPCClient {
     public void sendOutcome(beans.Player p, boolean o) {
         ManagedChannel channel = ManagedChannelBuilder.forTarget(p.playerAddress + ":" + p.listenPort).usePlaintext().build();
         P2PServiceGrpc.P2PServiceStub stub = P2PServiceGrpc.newStub(channel);
-        stub.notifyOutcome(P2PServiceOuterClass.PlayerOutcome.newBuilder().setSafe(o).build(), new StreamObserver<Empty>() {
+        P2PServiceOuterClass.Player player = P2PServiceOuterClass.Player.newBuilder().setId(client.getId())
+                .setPlayerAddress(client.getPlayerAddress())
+                .setListenPort(client.getListenPort())
+                .setX(client.getX())
+                .setY(client.getY())
+                .build();
+        P2PServiceOuterClass.PlayerOutcome outcome = P2PServiceOuterClass.PlayerOutcome.newBuilder()
+                .setSafe(o)
+                .setPlayer(player)
+                .build();
+        stub.notifyOutcome(outcome, new StreamObserver<Empty>() {
             @Override
             public void onNext(Empty value) {
 
