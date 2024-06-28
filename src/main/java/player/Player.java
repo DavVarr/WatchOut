@@ -369,10 +369,6 @@ public class Player extends AbstractPlayer{
             System.out.println(p);
             grpcClient.sendElection(p);
         }
-        // wait for victory, then consensus is reached, phase = game.
-        gameSynchronizer.waitVictory();
-        this.phase = Phase.GAME;
-        gameSynchronizer.notifyConsensus();
 
     }
 
@@ -380,6 +376,7 @@ public class Player extends AbstractPlayer{
      * Once called, this player starts to play, according to its role.
      */
     private void play(){
+        phase = Phase.GAME;
         System.out.println("Player " + this.id + ": playing game");
         if (isSeeker) playSeeker();
         else playHider();

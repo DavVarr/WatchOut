@@ -50,7 +50,7 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
      */
     @Override
     public void coordinator(P2PServiceOuterClass.CoordinatorId request, StreamObserver<Empty> responseObserver) {
-        receivingPlayer.getGameSynchronizer().notifyVictory();
+        receivingPlayer.getGameSynchronizer().notifyConsensus();
         responseObserver.onNext(Empty.newBuilder().build());
         responseObserver.onCompleted();
     }
