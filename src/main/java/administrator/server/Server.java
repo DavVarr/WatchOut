@@ -105,9 +105,9 @@ class Server {
      */
     public void addHRMeasurements(HeartRateMeasurements measure){
         synchronized (measurementsMap){
-            List<HeartRateMeasurements> measurementsList = measurementsMap.get(measure.id);
+            List<HeartRateMeasurements> measurementsList = measurementsMap.get(measure.getId());
             if (measurementsList == null) {
-                measurementsMap.put(measure.id, new ArrayList<>(Collections.singletonList(measure)));
+                measurementsMap.put(measure.getId(), new ArrayList<>(Collections.singletonList(measure)));
             } else {
                 measurementsList.add(measure);
             }
@@ -145,7 +145,7 @@ class Server {
      */
     public int measurementsCount(int playerId) {
         synchronized (measurementsMap) {
-        return measurementsMap.get(playerId).stream().map(a -> a.averageHRList.size()).reduce((a, b) -> a+b).get();
+        return measurementsMap.get(playerId).stream().map(a -> a.getAverageHRList().size()).reduce((a, b) -> a+b).get();
         }
     }
 
@@ -169,7 +169,7 @@ class Server {
             List<HeartRateMeasurements> playerMeasurementsList = measurementsMap.get(playerId);
             if ( playerMeasurementsList == null || playerMeasurementsList.isEmpty()) throw new NoSuchElementException("Player "+playerId+" does not have measurements");
             List<Double> allValues = playerMeasurementsList.stream()
-                .flatMap(m -> m.averageHRList.stream())
+                .flatMap(m -> m.getAverageHRList().stream())
                 .collect(Collectors.toList());
 
             if (n > allValues.size() || n < 0) {
@@ -201,8 +201,8 @@ class Server {
 
             OptionalDouble optionalAverage = measurementsMap.values().stream()
                 .flatMap(List::stream) // Flatten the collection of lists into a stream of HeartRateMeasurements
-                .filter(m -> m.timestamp >= t1 && m.timestamp <= t2) // Filter by timestamp
-                .flatMap(m -> m.averageHRList.stream()) // Flatten the averageHRList into a stream of Double
+                .filter(m -> m.getTimestamp() >= t1 && m.getTimestamp() <= t2) // Filter by timestamp
+                .flatMap(m -> m.getAverageHRList().stream()) // Flatten the averageHRList into a stream of Double
                 .mapToDouble(Double::doubleValue)
                 .average();
             if (optionalAverage.isPresent()) {
