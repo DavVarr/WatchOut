@@ -50,6 +50,7 @@ public class Player extends AbstractPlayer{
         this.listenPort = port;
         this.adminAddress = adminAddress;
         grpcClient =  new GRPCClient(this);
+        startGameLoop();
     }
 
     private void resetGameVariables(){
@@ -65,7 +66,7 @@ public class Player extends AbstractPlayer{
      * game loop according to the phase of the game at the time of this player's entry. Returns printing the error, if
      * registration to the administration server failed.
      */
-    public void startGameLoop(){
+    private void startGameLoop(){
         startGRPC();
         int status = registerToServer();
         if (status == 409) {
@@ -95,8 +96,9 @@ public class Player extends AbstractPlayer{
                 Phase p = Phase.valueOf(phaseResponse.getPhase().name());
                 if(p.ordinal() > mostAdvanced.ordinal()) mostAdvanced = p;
             }
+            phase = mostAdvanced;
         }
-
+        System.out.println("Player " + id + ": phase = " + phase.name());
         if (phase == Phase.ELECTION) startElection();
         if (phase == Phase.GAME){
             play();
@@ -276,9 +278,9 @@ public class Player extends AbstractPlayer{
                     String receivedMessage = new String(message.getPayload());
                     if (topic.equals("WatchOut/broadcast")) {
                         if (receivedMessage.equals("start")) {
-                            System.out.println("Game manager started the game, starting election of seeker");
                             // if game is in end state return, the other phases will get handled by startElection method
                             if (phase == Phase.END) return;
+                            System.out.println("Game manager started the game, starting election of seeker");
                             startElection();
                         }else{
                             System.out.println("Message received from game manager: " + receivedMessage);
@@ -289,6 +291,7 @@ public class Player extends AbstractPlayer{
 
                 public void connectionLost(Throwable cause) {
                     System.out.println(clientId + " Connection lost! cause:" + cause.getMessage() + "-  Thread PID: " + Thread.currentThread().getId());
+                    System.out.println(cause.toString());
                 }
 
                 public void deliveryComplete(IMqttDeliveryToken token) {
@@ -320,9 +323,13 @@ public class Player extends AbstractPlayer{
      */
     public void startElection(){
         synchronized (phaseLock){
-            if (phase == Phase.ELECTION || phase == Phase.GAME || phase == Phase.UNKNOWN) return;
+            if (phase == Phase.ELECTION || phase == Phase.GAME || phase == Phase.UNKNOWN){
+                System.out.println("Player " + id + ": cannot start election, phase = " + phase.name());
+                return;
+            }
             phase = Phase.ELECTION;
         }
+        System.out.println("Starting election...");
         // bully algorithm
         List<beans.Player> higherPriorityPeers = new ArrayList<>();
         // synchronize to prevent players entering while determining if this player has the highest priority.
@@ -342,6 +349,7 @@ public class Player extends AbstractPlayer{
             }
 
             if (higherPriorityPeers.isEmpty()) {
+                System.out.println("Player " + this.id + " won the election");
                 // this player has higher priority, so send victory.
                 for (beans.Player p : peers) {
                     grpcClient.sendVictory(p,victoryAcks);
@@ -356,8 +364,9 @@ public class Player extends AbstractPlayer{
             }
             
         }
-
+        System.out.println("Player " + this.id + ": sending election messages to higher priority peers");
         for (beans.Player p : higherPriorityPeers) {
+            System.out.println(p);
             grpcClient.sendElection(p);
         }
         // wait for victory, then consensus is reached, phase = game.
@@ -371,6 +380,7 @@ public class Player extends AbstractPlayer{
      * Once called, this player starts to play, according to its role.
      */
     private void play(){
+        System.out.println("Player " + this.id + ": playing game");
         if (isSeeker) playSeeker();
         else playHider();
     }
@@ -418,6 +428,8 @@ public class Player extends AbstractPlayer{
             closestDistance = closestDistance * 10;
 
             long timeMillis = (long)Math.ceil(closestDistance/0.002);
+            System.out.println("Player " + id + ": moving towards player: " + closest.id + ", distance: "
+                    + closestDistance + " time: " + timeMillis/1000 + " seconds");
             try {
                 Thread.sleep(timeMillis);
             } catch (InterruptedException e) {
@@ -434,6 +446,7 @@ public class Player extends AbstractPlayer{
             currentY = closest.getY();
         }
         // end game, wait for all players outcome, then send end message and wait for responses.
+        System.out.println("Player "+ id +":Game over, waiting for all players outcome");
         syncOutcomes.getAll();
         BroadcastResponses<Empty> endAcks;
         synchronized (peers){
@@ -443,6 +456,7 @@ public class Player extends AbstractPlayer{
             }
         }
         endAcks.getAll();
+        System.out.println("Player "+ id +": all players are synchronized on game end, returning to preparation");
         // once all peers are in end state, message to return to preparation can be sent and seeker role must be dropped.
         isSeeker = false;
         phase = Phase.PREPARATION;
@@ -470,23 +484,25 @@ public class Player extends AbstractPlayer{
             }
         }
 
+        System.out.println("Player " + id + ": waiting for home base");
         // wait for all authorization to be received, then move to home base and wait 10 seconds
         homeBase.acquire();
-
         // if got tagged while waiting release resource
 
         if(homeBase.didRenounceToAcquire()){
             homeBase.release(grpcClient);
             return;
         }
-
         long timeToCenter = (long)Math.ceil(distanceFromCenter()/0.002);
+        System.out.println("Player " + this.id + ": acquired home base," + "time to safety: "
+                + timeToCenter/1000 + " + 10 seconds");
         try {
             Thread.sleep(timeToCenter + (10 * 1000));
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
         // broadcast safety
+        System.out.println("Player " + this.id + ": safe");
         isSafe = true;
         homeBase.release(grpcClient);
         broadCastOutcome(true);

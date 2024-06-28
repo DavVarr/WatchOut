@@ -39,6 +39,7 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
      */
     @Override
     public void election(Empty request, StreamObserver<P2PServiceOuterClass.OkResponse> responseObserver) {
+        System.out.println("Player " + receivingPlayer.id + " received election message");
         responseObserver.onNext(P2PServiceOuterClass.OkResponse.newBuilder().build());
         receivingPlayer.startElection();
         responseObserver.onCompleted();
@@ -63,6 +64,7 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
         if (homeBase.isHeld() || receivingPlayer.isSafe()){
             responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(false).build());
         }else{
+            System.out.println("Player " + receivingPlayer.id + ": got tagged");
             responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(true).build());
             receivingPlayer.setTagged();
             // interrupt waiting for home base
@@ -117,6 +119,7 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
      */
     @Override
     public void endGame(Empty request, StreamObserver<Empty> responseObserver) {
+        System.out.println("Player " + receivingPlayer.id + ": received message from seeker: game has ended");
         receivingPlayer.setPhase(Phase.END);
         receivingPlayer.getGameSynchronizer().notifyEnd();
         responseObserver.onNext(Empty.newBuilder().build());
