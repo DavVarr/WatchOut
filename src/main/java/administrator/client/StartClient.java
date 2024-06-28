@@ -42,7 +42,7 @@ public class StartClient {
                     System.out.println("message:'start' delivered");
                     break;
                 case "5":
-                    System.out.print("Insert message");
+                    System.out.print("Insert message: ");
                     String m = scanner.next();
                     client.broadcastMessage(m);
                     System.out.println("message:'"+ m +"' delivered");
