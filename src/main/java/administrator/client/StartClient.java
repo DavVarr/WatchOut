@@ -1,5 +1,8 @@
 package administrator.client;
 
+import beans.Player;
+
+import java.util.List;
 import java.util.Scanner;
 
 public class StartClient {
@@ -21,7 +24,8 @@ public class StartClient {
                     scanner.close();
                     System.exit(0);
                 case "1":
-                    client.printPlayers();
+                    List<Player> players = client.getPlayers();
+                    if (players != null) System.out.println(players);
                     break;
                 case "2":
                     System.out.print("Insert the number of the last n heart rate measurements: ");
@@ -38,6 +42,12 @@ public class StartClient {
                     client.printAverageRangeHR(t1, t2);
                     break;
                 case "4":
+                    if (client.getPlayers() == null) continue;
+                    int numPlayers = client.getPlayers().size();
+                    if(numPlayers < 2){
+                        System.out.println("To start game at least 2 players are requires, registered:"+ numPlayers);
+                        continue;
+                    }
                     client.broadcastMessage("start");
                     System.out.println("message:'start' delivered");
                     break;

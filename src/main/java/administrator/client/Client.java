@@ -83,18 +83,20 @@ class Client {
         }
     }
     /**
-     * Prints the list of players currently registered
+     * @return the list of players currently registered to the administration server.
+     * if server is not available, returns null
      */
-    public void printPlayers() {
+    public List<Player> getPlayers() {
         String getPath = "/players/get-all";
         ClientResponse clientResponse = getRequest(serverAddress + getPath);
+        if (clientResponse == null) return null;
         String body = clientResponse.getEntity(String.class).toString();
         List<Player> players = new Gson().fromJson(body, new TypeToken<List<Player>>() {
         }.getType());
-        System.out.println(players);
+        return players;
     }
 
-    /** Prints the average of the last n heart rate measurements sent to the server by a given player
+    /** Prints the average of the last n heart rate measurements sent to the server by a given player, if server is available.
      * @param n the number of last heart rate measurements
      * @param player the id of the player
      */
@@ -104,6 +106,7 @@ class Client {
         queryParam.add("player", player);
         String getPath = "/players/heart-rate/average/last-n";
         ClientResponse clientResponse = getRequest(serverAddress + getPath, queryParam);
+        if (clientResponse == null) return;
         String body = clientResponse.getEntity(String.class).toString();
         if (clientResponse.getStatus() == 200) {
             System.out.println("The average of the last " + n + " heart rate measurements sent to the server by the player " + player + " is " + body);
@@ -113,7 +116,7 @@ class Client {
     }
 
     /** Prints average of the heart rate measurements sent by all the players to the server and occurred between
-     * timestamps t1 and t2
+     * timestamps t1 and t2, if server is available.
      * @param t1 first timestamp
      * @param t2 second timestamp
      */
@@ -123,6 +126,7 @@ class Client {
         queryParam.add("t2", String.valueOf(t2));
         String getPath = "/players/heart-rate/average/between-time";
         ClientResponse clientResponse = getRequest(serverAddress + getPath, queryParam);
+        if (clientResponse == null) return;
         String body = clientResponse.getEntity(String.class).toString();
         if (clientResponse.getStatus() == 200) {
             System.out.println("The average of the heart rate measurements sent by all the players to the server and occurred between timestamps " + t1 + " and " + t2 + " is " + body);
