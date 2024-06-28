@@ -147,6 +147,16 @@ public class Player extends AbstractPlayer{
     }
 
     /**
+     * Removes the specified peer from the peers still in the game.
+     * @param p the peer to remove
+     */
+    public void removeFromGame(beans.Player p) {
+        synchronized (peers){
+            inGamePeers.remove(p);
+        }
+    }
+
+    /**
      *
      * @return the home base RAResource object
      */
@@ -179,6 +189,14 @@ public class Player extends AbstractPlayer{
      */
     public Phase getPhase() {
         return phase;
+    }
+
+    /**
+     *
+     * @return the lock on the phase object of this player
+     */
+    public Object getPhaseLock() {
+        return phaseLock;
     }
 
     /**
@@ -324,7 +342,6 @@ public class Player extends AbstractPlayer{
     public void startElection(){
         synchronized (phaseLock){
             if (phase == Phase.ELECTION || phase == Phase.GAME || phase == Phase.UNKNOWN){
-                System.out.println("Player " + id + ": cannot start election, phase = " + phase.name());
                 return;
             }
             phase = Phase.ELECTION;
@@ -376,7 +393,9 @@ public class Player extends AbstractPlayer{
      * Once called, this player starts to play, according to its role.
      */
     private void play(){
-        phase = Phase.GAME;
+        synchronized (phaseLock) {
+            phase = Phase.GAME;
+        }
         System.out.println("Player " + this.id + ": playing game");
         if (isSeeker) playSeeker();
         else playHider();
@@ -444,7 +463,10 @@ public class Player extends AbstractPlayer{
         }
         // end game, wait for all players outcome, then send end message and wait for responses.
         System.out.println("Player "+ id +":Game over, waiting for all players outcome");
-        syncOutcomes.getAll();
+        List<P2PServiceOuterClass.PlayerOutcome> results = syncOutcomes.getAll();
+        for (P2PServiceOuterClass.PlayerOutcome o : results){
+            System.out.println("Player " + o.getPlayer().getId() + ": " + (o.getSafe() ? "safe" : "tagged" ));
+        }
         BroadcastResponses<Empty> endAcks;
         synchronized (peers){
             endAcks = new BroadcastResponses<>(peers);

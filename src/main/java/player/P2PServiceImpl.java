@@ -2,6 +2,7 @@ package player;
 
 
 import com.google.protobuf.Empty;
+import io.grpc.Context;
 import p2p.P2PServiceOuterClass;
 import p2p.P2PServiceOuterClass.GreetResponse;
 
@@ -65,12 +66,19 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
             responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(false).build());
         }else{
             System.out.println("Player " + receivingPlayer.id + ": got tagged");
-            responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(true).build());
             receivingPlayer.setTagged();
             // interrupt waiting for home base
             homeBase.renounceToAcquire();
             // broadcast elimination
-            receivingPlayer.broadCastOutcome(false);
+            Context.current().fork().run(new Runnable(){
+
+                @Override
+                public void run() {
+                    receivingPlayer.broadCastOutcome(false);
+                }
+            });
+
+            responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(true).build());
             responseObserver.onCompleted();
         }
     }
@@ -109,6 +117,9 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
      */
     @Override
     public void notifyOutcome(P2PServiceOuterClass.PlayerOutcome request, StreamObserver<Empty> responseObserver) {
+        if (request.getSafe()){
+            receivingPlayer.removeFromGame(new beans.Player(request.getPlayer()));
+        }
         receivingPlayer.addOutcome(request);
         responseObserver.onNext(Empty.newBuilder().build());
         responseObserver.onCompleted();
@@ -131,7 +142,11 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
      */
     @Override
     public void goToPreparation(Empty request, StreamObserver<Empty> responseObserver) {
-        if (receivingPlayer.getPhase() == Phase.END) receivingPlayer.setPhase(Phase.PREPARATION);
+        synchronized (receivingPlayer.getPhaseLock()) {
+            if (receivingPlayer.getPhase() == Phase.END)
+                receivingPlayer.setPhase(Phase.PREPARATION);
+        }
+
         responseObserver.onNext(Empty.newBuilder().build());
         responseObserver.onCompleted();
     }
