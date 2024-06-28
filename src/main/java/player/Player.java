@@ -32,6 +32,7 @@ public class Player extends AbstractPlayer{
     private final Object phaseLock = new Object();
     private final RAResource homeBase = new RAResource();
     private final GRPCClient grpcClient;
+    private io.grpc.Server grpcServer;
     private final GameSynchronizer gameSynchronizer = new GameSynchronizer();
     private volatile boolean isSeeker = false;
     private volatile boolean isSafe = false;
@@ -71,9 +72,11 @@ public class Player extends AbstractPlayer{
         int status = registerToServer();
         if (status == 409) {
             System.out.println("id " + id + " already registered, try again");
+            stopGRPC();
             return;
         }else if (status != 200){
             System.out.println("Failed to reach administration server, error " + status);
+            stopGRPC();
             return;
         }
 
@@ -260,13 +263,21 @@ public class Player extends AbstractPlayer{
      */
     private void startGRPC() {
         try {
-            io.grpc.Server server = ServerBuilder.forPort(listenPort).addService(new P2PServiceImpl(this)).build();
-            server.start();
+            grpcServer = ServerBuilder.forPort(listenPort).addService(new P2PServiceImpl(this)).build();
+            grpcServer.start();
             System.out.println("GRPC server started!");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Stops gRPC server for this player.
+     */
+    private void stopGRPC() {
+        if(grpcServer != null) grpcServer.shutdown();
+    }
+
     /**
      * Connects this player's mqtt client and subscribes to topic where administration client sends messages, setting
      * the appropriate callback to start the game and print the received message.
