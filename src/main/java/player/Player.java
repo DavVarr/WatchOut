@@ -512,7 +512,8 @@ public class Player extends AbstractPlayer{
             homeBase.release(grpcClient);
             return;
         }
-        long timeToCenter = (long)Math.ceil(distanceFromCenter()/0.002);
+        double distanceFromCenter = distanceFromCenter() * 10;
+        long timeToCenter = (long)Math.ceil(distanceFromCenter/0.002);
         System.out.println("Player " + this.id + ": acquired home base," + "time to safety: "
                 + timeToCenter/1000 + " + 10 seconds");
         try {
