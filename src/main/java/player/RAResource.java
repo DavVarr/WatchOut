@@ -12,8 +12,7 @@ import java.util.Queue;
  * managed through Ricart and Agrawala algorithm. A RAResource is for this reason associated with a player (calling thread),
  * and holds information about its intention on the resource. So, an instance of this class is intended to be used only
  * by threads that represent the same player (it is the only possibility, since players are nodes of a distributed system).
- * The methods are properly synchronized to ensure the algorithm correctness. Furthermore, the methods to
- * acquire and release this instance, are intended to be called by the same thread (not thread safe).
+ * The methods are properly synchronized to ensure the algorithm correctness.
  */
 public class RAResource {
     // this class is only needed to represent the home base, but can be extended by fully implementing ricart and
@@ -126,7 +125,8 @@ public class RAResource {
     /**
      * Releases this resource, atomically updating its status to not needed, emptying the queue of pending authorizations
      * by sending each of the queued players the OK message, setting the authorizations to null and the acquireTimestamp
-     * to Long.MAX_VALUE. If called without holding or waiting the resource, it does nothing.
+     * to Long.MAX_VALUE. If called without holding or waiting the resource, it does nothing. If <code>acquire()</code>
+     * was called, this method must be called after its termination, otherwise the behaviour is undefined.
      * @param client the GRPCClient used to send the OK messages
      */
     public synchronized void release(GRPCClient client){
