@@ -12,7 +12,8 @@ import java.util.Queue;
  * managed through Ricart and Agrawala algorithm. A RAResource is for this reason associated with a player (calling thread),
  * and holds information about its intention on the resource. So, an instance of this class is intended to be used only
  * by threads that represent the same player (it is the only possibility, since players are nodes of a distributed system).
- * The methods are properly synchronized to ensure the algorithm correctness.
+ * The methods are properly synchronized to ensure the algorithm correctness. Furthermore, the methods to
+ * acquire and release this instance, are intended to be called by the same thread (not thread safe).
  */
 public class RAResource {
     // this class is only needed to represent the home base, but can be extended by fully implementing ricart and
@@ -61,7 +62,7 @@ public class RAResource {
      *
      * @return true if acquire was called, but while waiting renounceToAcquire() was called, false otherwise
      */
-    public boolean didRenounceToAcquire() {
+    public synchronized boolean didRenounceToAcquire() {
         if (authorizations == null) return false;
         return authorizations.didStopEarly();
     }
@@ -80,7 +81,6 @@ public class RAResource {
      * If this RAResource is not needed by the player, it does nothing.
      * @param response the OkResponse to add
      */
-    // can either make authorizations volatile and check if it is null, or make the method synchronized and check status.
     public synchronized void addAuthorization(P2PServiceOuterClass.OkResponse response){
         if(status == ResourceStatus.NOT_NEEDED) return;
         if (response.getOk()) authorizations.add(response);
