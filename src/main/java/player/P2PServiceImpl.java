@@ -42,7 +42,7 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
     public void election(Empty request, StreamObserver<P2PServiceOuterClass.OkResponse> responseObserver) {
         System.out.println("Player " + receivingPlayer.id + " received election message");
         responseObserver.onNext(P2PServiceOuterClass.OkResponse.newBuilder().build());
-        receivingPlayer.startElection();
+        receivingPlayer.startElection(false);
         responseObserver.onCompleted();
     }
 
@@ -69,14 +69,6 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
             receivingPlayer.setTagged();
             // interrupt waiting for home base
             homeBase.renounceToAcquire();
-            // broadcast elimination
-            Context.current().fork().run(new Runnable(){
-
-                @Override
-                public void run() {
-                    receivingPlayer.broadCastOutcome(false);
-                }
-            });
 
             responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(true).build());
             responseObserver.onCompleted();

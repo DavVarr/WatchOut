@@ -111,7 +111,7 @@ public class Player extends AbstractPlayer{
             phase = mostAdvanced;
         }
         System.out.println("Player " + id + ": phase = " + phase.name());
-        if (phase == Phase.ELECTION) startElection();
+        if (phase == Phase.ELECTION) startElection(true);
         if (phase == Phase.GAME){
             play();
             gameSynchronizer.waitEnd();
@@ -337,7 +337,7 @@ public class Player extends AbstractPlayer{
                             // if game is in end state return, the other phases will get handled by startElection method
                             if (phase == Phase.END) return;
                             System.out.println("Game manager started the game, starting election of seeker");
-                            startElection();
+                            startElection(false);
                         }else{
                             System.out.println("Message received from game manager: " + receivedMessage);
                         }
@@ -375,11 +375,14 @@ public class Player extends AbstractPlayer{
     /**
      * Starts an election with a distributed algorithm. It is assumed that players do not crash/leave, so the timeout of
      * election request is not handled. Once a consensus is reached, it is notified through the GameSynchronizer object.
-     * If an election is already ongoing, the player is playing or the phase of the game is unknown, it does nothing.
+     * If an election is already ongoing, the player is playing or the phase of the game is unknown, it does nothing,
+     * unless <code>forceElection</code> is set to true.
+     * @param forceElection if true, it starts the election even if the phase does not foresee it
      */
-    public void startElection(){
+    public void startElection(boolean forceElection){
         synchronized (phaseLock){
-            if (phase == Phase.ELECTION || phase == Phase.GAME || phase == Phase.UNKNOWN){
+            if ((phase == Phase.ELECTION || phase == Phase.GAME || phase == Phase.UNKNOWN || isSeeker)
+                && !forceElection){
                 return;
             }
             phase = Phase.ELECTION;
@@ -455,7 +458,7 @@ public class Player extends AbstractPlayer{
             beans.Player closest = new beans.Player();
             double closestDistance = Double.MAX_VALUE;
             synchronized (peers) {
-                // if no player remain in the game, phase = end, initialize structure to wait for all players' outcomes.
+                // if no player remain in the game, the game has ended.
                 if (inGamePeers.isEmpty()) {
                     synchronized (outcomes) {
                         syncOutcomes = new BroadcastResponses<>(peers);
@@ -464,6 +467,18 @@ public class Player extends AbstractPlayer{
                         }
                     }
                     phase = Phase.END;
+                    // end game, wait for all players outcome, then send end message and wait for responses.
+                    System.out.println("Player "+ id +":Game over, waiting for all players outcome");
+                    List<P2PServiceOuterClass.PlayerOutcome> results = syncOutcomes.getAll();
+                    for (P2PServiceOuterClass.PlayerOutcome o : results){
+                        System.out.println("Player " + o.getPlayer().getId() + ": " + (o.getSafe() ? "safe" : "tagged" ));
+                    }
+                    BroadcastResponses<Empty> endAcks;
+                    endAcks = new BroadcastResponses<>(peers);
+                    for (beans.Player p : peers) {
+                        grpcClient.sendEndGame(p,endAcks);
+                    }
+                    endAcks.getAll();
                     break;
                 }
                 // find the closest player, need to remain synchronized to avoid adding while iterating
@@ -499,20 +514,7 @@ public class Player extends AbstractPlayer{
             currentX = closest.getX();
             currentY = closest.getY();
         }
-        // end game, wait for all players outcome, then send end message and wait for responses.
-        System.out.println("Player "+ id +":Game over, waiting for all players outcome");
-        List<P2PServiceOuterClass.PlayerOutcome> results = syncOutcomes.getAll();
-        for (P2PServiceOuterClass.PlayerOutcome o : results){
-            System.out.println("Player " + o.getPlayer().getId() + ": " + (o.getSafe() ? "safe" : "tagged" ));
-        }
-        BroadcastResponses<Empty> endAcks;
-        synchronized (peers){
-            endAcks = new BroadcastResponses<>(peers);
-            for (beans.Player p : peers) {
-                grpcClient.sendEndGame(p,endAcks);
-            }
-        }
-        endAcks.getAll();
+
         System.out.println("Player "+ id +": all players are synchronized on game end, returning to preparation");
         // once all peers are in end state, message to return to preparation can be sent and seeker role must be dropped.
         isSeeker = false;
@@ -535,7 +537,10 @@ public class Player extends AbstractPlayer{
         // need to atomically check for tagged and request access, so that the thread receiving the tag message can
         // either set the isTagged variable before this block, or interrupt the waiting of the authorizations after it.
         synchronized (taggedLock){
-            if (isTagged)return;
+            if (isTagged) {
+                broadCastOutcome(false);
+                return;
+            }
             synchronized (peers) {
                 homeBase.requestAccess(grpcClient,peers);
             }
@@ -548,6 +553,7 @@ public class Player extends AbstractPlayer{
 
         if(homeBase.didRenounceToAcquire()){
             homeBase.release(grpcClient);
+            broadCastOutcome(false);
             return;
         }
         double distanceFromCenter = distanceFromCenter() * 10;
