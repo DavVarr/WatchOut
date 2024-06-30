@@ -62,7 +62,7 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
     @Override
     public void tag(Empty request, StreamObserver<P2PServiceOuterClass.TagResponse> responseObserver) {
         RAResource homeBase = receivingPlayer.getHomeBase();
-        if (homeBase.isHeld() || receivingPlayer.isSafe()){
+        if (homeBase.isHeld() || receivingPlayer.isSafe() || receivingPlayer.getPhase() != Phase.GAME){
             responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(false).build());
         }else{
             System.out.println("Player " + receivingPlayer.id + ": got tagged");
