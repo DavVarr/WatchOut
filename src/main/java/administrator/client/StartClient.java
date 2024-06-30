@@ -45,7 +45,7 @@ public class StartClient {
                     if (client.getPlayers() == null) continue;
                     int numPlayers = client.getPlayers().size();
                     if(numPlayers < 2){
-                        System.out.println("To start game at least 2 players are requires, registered:"+ numPlayers);
+                        System.out.println("To start game at least 2 players are required, registered:"+ numPlayers);
                         continue;
                     }
                     client.broadcastMessage("start");
