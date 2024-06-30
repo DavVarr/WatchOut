@@ -467,18 +467,6 @@ public class Player extends AbstractPlayer{
                         }
                     }
                     phase = Phase.END;
-                    // end game, wait for all players outcome, then send end message and wait for responses.
-                    System.out.println("Player "+ id +":Game over, waiting for all players outcome");
-                    List<P2PServiceOuterClass.PlayerOutcome> results = syncOutcomes.getAll();
-                    for (P2PServiceOuterClass.PlayerOutcome o : results){
-                        System.out.println("Player " + o.getPlayer().getId() + ": " + (o.getSafe() ? "safe" : "tagged" ));
-                    }
-                    BroadcastResponses<Empty> endAcks;
-                    endAcks = new BroadcastResponses<>(peers);
-                    for (beans.Player p : peers) {
-                        grpcClient.sendEndGame(p,endAcks);
-                    }
-                    endAcks.getAll();
                     break;
                 }
                 // find the closest player, need to remain synchronized to avoid adding while iterating
@@ -515,6 +503,18 @@ public class Player extends AbstractPlayer{
             currentY = closest.getY();
         }
 
+        // end game, wait for all players outcome, then send end message and wait for responses.
+        System.out.println("Player "+ id +":Game over, waiting for all players outcome");
+        List<P2PServiceOuterClass.PlayerOutcome> results = syncOutcomes.getAll();
+        for (P2PServiceOuterClass.PlayerOutcome o : results){
+            System.out.println("Player " + o.getPlayer().getId() + ": " + (o.getSafe() ? "safe" : "tagged" ));
+        }
+        BroadcastResponses<Empty> endAcks;
+        endAcks = new BroadcastResponses<>(peers);
+        for (beans.Player p : peers) {
+            grpcClient.sendEndGame(p,endAcks);
+        }
+        endAcks.getAll();
         System.out.println("Player "+ id +": all players are synchronized on game end, returning to preparation");
         // once all peers are in end state, message to return to preparation can be sent and seeker role must be dropped.
         isSeeker = false;
@@ -546,7 +546,7 @@ public class Player extends AbstractPlayer{
             }
         }
 
-        System.out.println("Player " + id + ": waiting for home base");
+        System.out.println("Player " + id + ": waiting for home base, timestamp:" + homeBase.getAcquireTimestamp());
         // wait for all authorization to be received, then move to home base and wait 10 seconds
         homeBase.acquire();
         // if got tagged while waiting release resource
