@@ -57,21 +57,24 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
     }
 
     /*
-     * Received tag request, if home base acquired or this player is safe send false, else send true and set tagged state
+     * Received tag request, if home base acquired or this player is safe  or phase != game send false,
+     * else send true and set tagged state
      */
     @Override
     public void tag(Empty request, StreamObserver<P2PServiceOuterClass.TagResponse> responseObserver) {
         RAResource homeBase = receivingPlayer.getHomeBase();
-        if (homeBase.isHeld() || receivingPlayer.isSafe() || receivingPlayer.getPhase() != Phase.GAME){
-            responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(false).build());
-        }else{
-            System.out.println("Player " + receivingPlayer.id + ": got tagged");
-            receivingPlayer.setTagged();
-            // interrupt waiting for home base
-            homeBase.renounceToAcquire();
+        synchronized (receivingPlayer.getPhaseLock()) {
+            if (homeBase.isHeld() || receivingPlayer.isSafe() || receivingPlayer.getPhase() != Phase.GAME){
+                responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(false).build());
+            }else{
+                System.out.println("Player " + receivingPlayer.id + ": got tagged");
+                receivingPlayer.setTagged();
+                // interrupt waiting for home base
+                homeBase.renounceToAcquire();
 
-            responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(true).build());
-            responseObserver.onCompleted();
+                responseObserver.onNext(P2PServiceOuterClass.TagResponse.newBuilder().setTagged(true).build());
+                responseObserver.onCompleted();
+            }
         }
     }
 
@@ -105,7 +108,8 @@ public class P2PServiceImpl extends P2PServiceGrpc.P2PServiceImplBase {
     }
 
     /*
-     * Received outcome, add it to the list of outcomes
+     * Received outcome, add it to the list of outcomes. If received safe outcome, remove the player from the in game
+     * peers to avoid moving towards it
      */
     @Override
     public void notifyOutcome(P2PServiceOuterClass.PlayerOutcome request, StreamObserver<Empty> responseObserver) {

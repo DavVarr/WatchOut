@@ -43,12 +43,6 @@ public class Player extends AbstractPlayer{
     private final List<P2PServiceOuterClass.PlayerOutcome> outcomes = new ArrayList<>();
     private BroadcastResponses<P2PServiceOuterClass.PlayerOutcome> syncOutcomes;
 
-    private SlidingWindowBuffer slidingWindowBuffer;
-    private SlidingWindowConsumer slidingWindowConsumer;
-    private List<Double> averageHRList;
-    private HRSimulator hrSimulator;
-    private MeasurementSender measurementSender;
-
     /**
      * Constructs a Player initializing the necessary fields
      * @param id The id of this player
@@ -78,37 +72,41 @@ public class Player extends AbstractPlayer{
      */
     private void startGameLoop(){
         startGRPC();
-        int status = registerToServer();
-        if (status == 409) {
-            System.out.println("id " + id + " already registered, try again");
-            stopGRPC();
-            return;
-        }else if (status != 200){
-            System.out.println("Failed to reach administration server, error " + status);
-            stopGRPC();
-            return;
-        }
+        // lock on phase to avoid grpcServer threads checking phase when it is unknown
+        synchronized (phaseLock) {
+            int status = registerToServer();
+            if (status == 409) {
+                System.out.println("id " + id + " already registered, try again");
+                stopGRPC();
+                return;
+            } else if (status != 200) {
+                System.out.println("Failed to reach administration server, error " + status);
+                stopGRPC();
+                return;
+            }
 
-        // start sensor data related threads
-        startSimulator();
-        // present to already registered players
-        BroadcastResponses<P2PServiceOuterClass.GreetResponse> greetResponses;
-        synchronized(peers){
-            greetResponses = new BroadcastResponses<>(peers);
-            for (beans.Player p : peers){
-                grpcClient.presentToPeer(p,greetResponses);
+            // start sensor data related threads
+            startSimulator();
+            // present to already registered players
+            BroadcastResponses<P2PServiceOuterClass.GreetResponse> greetResponses;
+            synchronized (peers) {
+                greetResponses = new BroadcastResponses<>(peers);
+                for (beans.Player p : peers) {
+                    grpcClient.presentToPeer(p, greetResponses);
+                }
             }
-        }
-        List<P2PServiceOuterClass.GreetResponse> phases = greetResponses.getAll();
-        startMqtt();
-        // if phase is unknown get the most advanced phase among the responses
-        if (phase == Phase.UNKNOWN) {
-            Phase mostAdvanced = phase;
-            for (P2PServiceOuterClass.GreetResponse phaseResponse : phases){
-                Phase p = Phase.valueOf(phaseResponse.getPhase().name());
-                if(p.ordinal() > mostAdvanced.ordinal()) mostAdvanced = p;
+            List<P2PServiceOuterClass.GreetResponse> responses = greetResponses.getAll();
+            startMqtt();
+            // if phase is unknown get the most advanced phase among the responses
+            if (phase == Phase.UNKNOWN) {
+                Phase mostAdvanced = phase;
+                for (P2PServiceOuterClass.GreetResponse response : responses) {
+                    Phase p = Phase.valueOf(response.getPhase().name());
+                    if (p.ordinal() > mostAdvanced.ordinal()) mostAdvanced = p;
+                }
+                phase = mostAdvanced;
             }
-            phase = mostAdvanced;
+
         }
         System.out.println("Player " + id + ": phase = " + phase.name());
         if (phase == Phase.ELECTION) startElection(true);
@@ -131,12 +129,12 @@ public class Player extends AbstractPlayer{
      * server.
      */
     private void startSimulator() {
-        slidingWindowBuffer = new SlidingWindowBuffer();
-        averageHRList = new ArrayList<>();
+        SlidingWindowBuffer slidingWindowBuffer = new SlidingWindowBuffer();
+        List<Double> averageHRList = new ArrayList<>();
 
-        hrSimulator = new HRSimulator(slidingWindowBuffer);
-        slidingWindowConsumer = new SlidingWindowConsumer(slidingWindowBuffer, averageHRList);
-        measurementSender = new MeasurementSender(id, adminAddress, averageHRList);
+        HRSimulator hrSimulator = new HRSimulator(slidingWindowBuffer);
+        SlidingWindowConsumer slidingWindowConsumer = new SlidingWindowConsumer(slidingWindowBuffer, averageHRList);
+        MeasurementSender measurementSender = new MeasurementSender(id, adminAddress, averageHRList);
 
         hrSimulator.start();
         slidingWindowConsumer.start();
